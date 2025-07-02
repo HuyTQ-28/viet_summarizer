@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.ipynb_checkpoints
+.env
+checkpoint/
+runs/
+*.pt
+*.ckpt
+data/
+tokenizers/
