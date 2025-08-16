@@ -1,14 +1,15 @@
 import os
 import time
 import torch
-import torch.nn as nn
 import torch.optim as optim
+from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 from utils.config import get_config
 from utils.data_loader import load_data_from_csv, get_data_loaders
 from utils.data_loader import clear_causal_mask_cache
-from evaluate import evaluate, compute_loss
+from evaluate import evaluate, LabelSmoothingLoss
+from torch import nn
 
 from model.transformer import build_transformer
 
@@ -36,7 +37,7 @@ def load_tokenizer(spm_model_file: str):
             raise ValueError(f"Tokenizer thiếu {name}. Hãy huấn luyện tokenizer với BOS/EOS/PAD hoặc chỉnh lại dataset.")
     return sp
 
-def train_one_epoch(model, optimizer, dataloader, device, pad_id, log_interval=50, writer=None, epoch=0, max_grad_norm: float = 1.0,
+def train_one_epoch(model, optimizer, dataloader, device, loss_fn, log_interval=50, writer=None, epoch=0, max_grad_norm: float = 1.0,
                     use_amp: bool = False, num_accumulation_steps: int = 1):
     """
     Huấn luyện mô hình trong một epoch
@@ -45,19 +46,20 @@ def train_one_epoch(model, optimizer, dataloader, device, pad_id, log_interval=5
         optimizer: Optimizer
         dataloader: DataLoader
         device: Device
-        pad_id: int
+        loss_fn: Loss function
         log_interval: int
         writer: SummaryWriter
         epoch: int
         max_grad_norm: float
+        use_amp: bool
+        num_accumulation_steps: int
     """
     model.train()
     scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
     running_loss = 0.0
-    count = 0
-    start = time.time()
+    progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
 
-    for step, batch in enumerate(dataloader):
+    for step, batch in enumerate(progress_bar):
         src = batch['encoder_input'].to(device)
         tgt_in = batch['decoder_input'].to(device)
         labels = batch['label'].to(device)
@@ -71,7 +73,7 @@ def train_one_epoch(model, optimizer, dataloader, device, pad_id, log_interval=5
             enc_out = model.encode(src, src_mask)
             dec_out = model.decode(enc_out, src_mask, tgt_in, tgt_mask)
             logits = model.project(dec_out)
-            loss = compute_loss(logits, labels, pad_id)
+            loss = loss_fn(logits, labels)
 
         loss_to_backprop = loss / max(1, num_accumulation_steps)
         scaler.scale(loss_to_backprop).backward()
@@ -84,19 +86,16 @@ def train_one_epoch(model, optimizer, dataloader, device, pad_id, log_interval=5
             scaler.step(optimizer)
             scaler.update()
 
-        running_loss += loss.item()
-        count += 1
+        current_loss = loss.item()
+        running_loss += current_loss
 
-        if (step + 1) % log_interval == 0:
-            avg_loss = running_loss / count
-            if writer:
-                global_step = epoch * len(dataloader) + step
-                writer.add_scalar('train/loss', avg_loss, global_step)
-            elapsed = time.time() - start
-            print(f"Epoch {epoch+1} Step {step+1}/{len(dataloader)} - loss: {avg_loss:.4f} - {elapsed:.1f}s")
-            running_loss = 0.0
-            count = 0
-            start = time.time()
+        avg_loss_so_far = running_loss / (step + 1)
+        progress_bar.set_postfix(loss=f"{avg_loss_so_far:.4f}")
+
+        if writer and (step + 1) % log_interval == 0:
+            global_step = epoch * len(dataloader) + step
+            writer.add_scalar('train/loss', current_loss, global_step)
+            writer.add_scalar('train/lr', optimizer.param_groups[0]['lr'], global_step)
 
 def main():
     config = get_config()
@@ -131,6 +130,14 @@ def main():
         dropout=config["dropout"],
     ).to(device)
 
+    # Loss function
+    cross_entropy_loss_fn = nn.CrossEntropyLoss(ignore_index=pad_id).to(device)
+    label_smoothing_loss_fn = LabelSmoothingLoss(
+        smoothing=float(config.get("label_smoothing", 0.0)),
+        pad_id=pad_id
+    ).to(device)
+    dropoff_epoch = config.get("label_smoothing_dropoff_epoch", -1)
+
     # Optimizer
     optimizer = optim.AdamW(model.parameters(), lr=config["lr"], weight_decay=config["weight_decay"]) 
 
@@ -145,31 +152,40 @@ def main():
     best_val = float('inf')
 
     for epoch in range(config["epochs"]):
+        # Train
         clear_causal_mask_cache()
+        current_loss_fn = None
+        if dropoff_epoch != -1 and epoch >= dropoff_epoch:
+            current_loss_fn = cross_entropy_loss_fn
+            print(f"---Epoch {epoch+1} - Using Cross Entropy Loss---")
+        else:
+            current_loss_fn = label_smoothing_loss_fn
+            print(f"---Epoch {epoch+1} - Using Label Smoothing Loss---")
+
         train_one_epoch(
-            model, optimizer, train_loader, device, pad_id,
+            model, optimizer, train_loader, device, current_loss_fn,
             log_interval=config.get("log_interval", 50), writer=writer, epoch=epoch,
             max_grad_norm=float(config.get("max_grad_norm", 1.0)),
             use_amp=bool(config.get("use_amp", True)),
             num_accumulation_steps=int(config.get("num_accumulation_steps", 1)),
         )
 
-        if val_loader is not None:
-            val_loss = evaluate(model, val_loader, device, pad_id)
-            print(f"Epoch {epoch+1} validation loss: {val_loss:.4f}")
-            if writer: 
-                writer.add_scalar('val/loss', val_loss, epoch)
-            if val_loss < best_val:
-                best_val = val_loss
-                ckpt_path = os.path.join(config["save_dir"], f"best.pt")
-                torch.save({
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'config': config,
-                    'val_loss': val_loss,
-                    'epoch': epoch,
-                }, ckpt_path)
-                print(f"Saved checkpoint to {ckpt_path}")
+        # Evaluate
+        val_loss = evaluate(model, val_loader, device, current_loss_fn)
+        print(f"Epoch {epoch+1} validation loss: {val_loss:.4f}")
+        if writer: 
+            writer.add_scalar('val/loss', val_loss, epoch)
+        if val_loss < best_val:
+            best_val = val_loss
+            ckpt_path = os.path.join(config["save_dir"], f"best.pt")
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'config': config,
+                'val_loss': val_loss,
+                'epoch': epoch,
+            }, ckpt_path)
+            print(f"Saved checkpoint to {ckpt_path}")
 
     if writer:
         writer.close()

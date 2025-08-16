@@ -4,23 +4,21 @@ from pathlib import Path
 def get_config():
     config = {
         # Data & Tokenizer
-        "train_csv": "data/processed/train_small.csv",
-        "val_csv": "data/processed/train_small.csv",
+        "train_csv": "data/processed/train.csv",
+        "val_csv": "data/processed/val.csv",
         "test_csv": None,
         "tokenizer_file": "tokenizers/spm_vietnamese_model.model",
 
         # Sequence lengths
-        # Với dữ liệu dài (~1085 tokens), có thể tăng max_len_text, cân nhắc batch_size/AMP
-        "max_len_text": 512,
+        "max_len_text": 1024,
         "max_len_summary": 128,
 
         # DataLoader
-        "batch_size": 4,
-        "val_batch_size": 4,
-        "num_workers": 0,
+        "batch_size": 6,
+        "val_batch_size": 12,
+        "num_workers": 8,
         
         # Truncate strategies (Dataset)
-        # head | tail | head_tail
         "truncate_strategy_text": "head_tail",
         "truncate_strategy_summary": "head",
 
@@ -32,15 +30,16 @@ def get_config():
         "dropout": 0.1,
 
         # Training
-        "epochs": 3,
+        "epochs": 20,
         "lr": 3e-4,
         "weight_decay": 1e-2,
         "max_grad_norm": 1.0,
+        "label_smoothing": 0.1,
+        "label_smoothing_dropoff_epoch": 15,
 
         # Memory/throughput helpers
         "use_amp": True,
-        # Tăng num_accumulation_steps để mô phỏng batch lớn khi seq_len tăng
-        "num_accumulation_steps": 1,
+        "num_accumulation_steps": 8,
 
         # Checkpoint & Logging
         "save_dir": "checkpoints",
