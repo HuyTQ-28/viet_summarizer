@@ -1,0 +1,10 @@
+torch
+pandas
+tqdm
+sentencepiece
+tensorboard
+datasets
+matplotlib
+seaborn
+jupyter
+ipywidgets

@@ -33,28 +33,23 @@ def clean_text(text):
     text = re.sub(r'[\u200b\u200c\u200d\ufeff]', '', text) # Xóa các ký tự vô hình
     text = text.lower() # Chuyển văn bản thành chữ thường
 
-    # --- Loại bỏ nhiễu: links, chú thích ảnh/video ---
-    text = re.sub(r'https?://\S+|www\.\S+', '', text) # Loại bỏ URLs
-    text = re.sub(r'\s*(ảnh|video)\s*:\s*[\w\s_.-]+', ' ', text) # Loại bỏ chú thích ảnh/video
+    # Loại bỏ nhiễu: links, chú thích ảnh/video ---
+    text = re.sub(r'https?://\S+|www\.\S+', '', text)
+    text = re.sub(r'\s*(ảnh|video)\s*:\s*[\w\s_.-]+', ' ', text)
 
-    # --- Các bước chuẩn hóa ---
+    # Các bước chuẩn hóa
     text = normalize_dates(text)
     text = normalize_numbers(text)
 
-    # --- Xử lý dấu câu ---
-    # Tách dấu câu khỏi từ
-    text = re.sub(r'([,!?:;()"])', r' \1 ', text)
-    # Tách dấu chấm có điều kiện
-    text = re.sub(r'(?<!\d)\.(?!\d)', ' . ', text)
+    # Xử lý dấu câu
+    text = re.sub(r'([,!?:;()"])', r' \1 ', text) # Tách dấu câu khỏi từ
+    text = re.sub(r'(?<!\d)\.(?!\d)', ' . ', text) # Tách dấu chấm có điều kiện
     
     # Loại bỏ các ký tự không mong muốn, giữ lại từ ghép
     text = re.sub(r'[^\w\s\.\,\!\?\:\;\/\(\)_]', ' ', text)
-
     
     # --- Dọn dẹp khoảng trắng và dấu câu lặp lại ---
-    # Thay thế nhiều dấu câu lặp lại bằng một dấu duy nhất (ví dụ: "!!!" -> "!")
     text = re.sub(r'([.?!,])\1+', r' \1 ', text)
-    # Xóa khoảng trắng thừa
     text = re.sub(r'\s+', ' ', text).strip()
 
     return text
@@ -91,5 +86,5 @@ def save_dataset(df, split_name):
         sample_df = df.sample(3)
         for i, row in sample_df.iterrows():
             f.write(f"--- Mẫu {i+1} ---\n")
-            f.write(f"Article ({row['article_len']} từ):\n{row['article']}\n\n")
-            f.write(f"Abstract ({row['abstract_len']} từ):\n{row['abstract']}\n\n")
+            f.write(f"Article:\n{row['article']}\n\n")
+            f.write(f"Abstract:\n{row['abstract']}\n\n")

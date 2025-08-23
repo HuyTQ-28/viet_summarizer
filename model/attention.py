@@ -1,5 +1,6 @@
 import torch.nn as nn
 import math
+import torch
 
 class MultiHeadAttentionBlock(nn.Module):
 
@@ -24,7 +25,8 @@ class MultiHeadAttentionBlock(nn.Module):
         # (Batch, h, seq_len, d_k) --> (Batch, h, seq_len, seq_len)
         attention_scores = (query @ key.transpose(-2, -1)) / math.sqrt(d_k)
         if mask is not None:
-            attention_scores.masked_fill_(mask == 0, -1e9)
+            mask_value = torch.finfo(attention_scores.dtype).min
+            attention_scores.masked_fill_(mask == 0, mask_value)
         attention_scores = attention_scores.softmax(dim=-1) # (Batch, h, seq_len, seq_len)
         if dropout is not None:
             attention_scores = dropout(attention_scores)

@@ -37,19 +37,6 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + (self.pe[:, :x.shape[1], :]).requires_grad_(False)
         return self.dropout(x)
-    
-# Có thể dùng thư viện torch.nn.LayerNorm sẽ tốt hơn
-# class LayerNormalization(nn.Module):
-#     def __init__(self, esp: float = 10**-6) -> None:
-#         super().__init__()
-#         self.esp = esp
-#         self.alpha = nn.Parameter(torch.ones(1)) # Mutiplied
-#         self.bias = nn.Parameter(torch.zeros(1)) # Added
-
-#     def forward(self, x):
-#         mean = x.mean(dim=-1, keepdim=True)
-#         std = x.std(dim=-1, keepdim=True)
-#         return self.alpha * (x - mean) / (std + self.esp) + self.bias
 
 class FeedForwardBlock(nn.Module):
 

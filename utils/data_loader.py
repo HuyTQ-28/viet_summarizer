@@ -13,7 +13,6 @@ def collate_fn(batch):
     if not batch:
         raise ValueError("Batch không thể rỗng!")
     
-    # Lấy pad_id
     pad_id = batch[0]['pad_id']
 
     # Tách các thành phần từ batch
@@ -29,21 +28,13 @@ def collate_fn(batch):
     labels_padded = pad_sequence(labels, batch_first=True, padding_value=pad_id)
 
     # Tạo encoder_mask: (batch_size, 1, 1, src_seq_len)
-    # Mask này dùng để che đi các token padding trong encoder input.
     encoder_mask = (encoder_inputs_padded != pad_id).unsqueeze(1).unsqueeze(1)
 
     # Tạo decoder_mask (kết hợp padding mask và causal mask)
-    # 1. Tạo padding mask cho decoder: (batch_size, 1, tgt_seq_len)
     decoder_padding_mask = (decoder_inputs_padded != pad_id).unsqueeze(1)
-    
-    # 2. Tạo causal mask: (tgt_seq_len, tgt_seq_len)
     tgt_seq_len = decoder_inputs_padded.size(1)
-    # Chuyển causal mask đến cùng device với data
     device = decoder_inputs_padded.device
     causal_mask = create_causal_mask(tgt_seq_len).to(device)
-
-    # 3. Kết hợp 2 mask: (batch_size, tgt_seq_len, tgt_seq_len)
-    # Causal mask sẽ được broadcast để khớp với shape của decoder_padding_mask
     decoder_mask = decoder_padding_mask.unsqueeze(1) & causal_mask.unsqueeze(0)
 
     return {
@@ -57,7 +48,6 @@ def collate_fn(batch):
     }
 
 
-# Cache cho causal masks để tránh tạo lại nhiều lần
 _causal_mask_cache = {}
 
 def create_causal_mask(size):
@@ -70,7 +60,7 @@ def create_causal_mask(size):
     """
     if size not in _causal_mask_cache:
         mask = torch.triu(torch.ones(size, size, dtype=torch.bool), diagonal=1)
-        _causal_mask_cache[size] = ~mask  # Invert để True là vị trí được phép nhìn thấy
+        _causal_mask_cache[size] = ~mask
     return _causal_mask_cache[size]
 
 
