@@ -1,0 +1,29 @@
+# Loại bỏ môi trường ảo
+venv/
+/venv
+runs/
+
+# Loại bỏ cache của Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Loại bỏ thư mục dữ liệu và checkpoints không cần thiết
+data/
+
+# Loại bỏ các file của Git và các công cụ khác
+.git
+.gitignore
+.dockerignore
+README.md
+
+# Loại bỏ các file notebook và cấu hình IDE
+*.ipynb
+*.png
+.vscode/
+.idea/
+
+# File Docker không cần có trong image
+Dockerfile
+docker-compose.yml

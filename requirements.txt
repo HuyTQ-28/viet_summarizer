@@ -2,15 +2,10 @@ torch
 pandas
 tqdm
 sentencepiece
-tensorboard
-datasets
-matplotlib
-seaborn
-jupyter
-ipywidgets
-evaluate
 fastapi
 uvicorn[standard]
 python-multipart
 jinja2
 aiofiles
+gunicorn
+boto3
