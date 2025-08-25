@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trình Tóm Tắt Văn Bản Tiếng Việt</title>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', path='css/style.css') }}"
+    />
+
+    <!-- Liên kết đến Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <h1>Trình Tóm Tắt Văn Bản Tiếng Việt</h1>
+        <p>
+          Sử dụng mô hình Transformer để tạo ra bản tóm tắt ngắn gọn cho văn bản
+          của bạn.
+        </p>
+      </header>
+
+      <div class="content-wrapper">
+        <!-- Cột Nhập Liệu (Bên Trái) -->
+        <div class="input-column">
+          <form id="summarize-form">
+            <div class="form-group">
+              <label for="input-text">Dán văn bản gốc vào đây:</label>
+              <textarea
+                id="input-text"
+                name="text"
+                rows="18"
+                placeholder="Nhập hoặc dán văn bản của bạn ở đây..."
+                required
+              ></textarea>
+            </div>
+
+            <fieldset class="options-group">
+              <legend>Tùy chọn nâng cao</legend>
+              <div class="options-grid">
+                <div class="form-group">
+                  <label for="beam-width"
+                    >Beam Width: <span id="beam-width-value">5</span></label
+                  >
+                  <input
+                    type="range"
+                    id="beam-width"
+                    name="beam_width"
+                    min="1"
+                    max="10"
+                    value="5"
+                    class="slider"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="temperature"
+                    >Temperature: <span id="temperature-value">1.0</span></label
+                  >
+                  <input
+                    type="range"
+                    id="temperature"
+                    name="temperature"
+                    min="0.1"
+                    max="2.0"
+                    step="0.1"
+                    value="1.0"
+                    class="slider"
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            <div class="actions">
+              <button type="submit" id="submit-btn">Tóm Tắt</button>
+              <div class="loader hidden" id="loader"></div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Cột Kết Quả (Bên Phải) -->
+        <div class="output-column">
+          <section id="results-container">
+            <h2>Kết quả tóm tắt:</h2>
+            <div class="summary-output" id="summary-output"></div>
+          </section>
+        </div>
+      </div>
+
+      <div id="error-message" class="error-message hidden"></div>
+    </main>
+
+    <script src="{{ url_for('static', path='js/main.js') }}" defer></script>
+  </body>
+</html>

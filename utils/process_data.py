@@ -7,7 +7,6 @@ import html
 
 tqdm.pandas()
 
-
 # Cấu hình
 DATASET_NAME = "ithieund/VietNews-Abs-Sum"
 PROCESSED_DATA_DIR = "data/processed"
@@ -88,3 +87,26 @@ def save_dataset(df, split_name):
             f.write(f"--- Mẫu {i+1} ---\n")
             f.write(f"Article:\n{row['article']}\n\n")
             f.write(f"Abstract:\n{row['abstract']}\n\n")
+
+def post_process_summary(text: str) -> str:
+    """
+    Hậu xử lý văn bản tóm tắt để hiển thị cho người dùng.
+    """
+    text = text.replace('_', ' ')
+
+    # Chuẩn hóa khoảng trắng trước dấu câu
+    text = re.sub(r'\s+([,.!?])', r'\1', text)
+
+    # Viết hoa chữ cái đầu tiên của toàn bộ chuỗi
+    if text:
+        text = text.strip()
+        text = text[0].upper() + text[1:]
+
+    # Viết hoa chữ cái sau dấu chấm câu
+    def capitalize_sentence(match):
+        return match.group(1) + match.group(2).upper()
+
+    # Regex để tìm một dấu câu (.!?) theo sau là khoảng trắng và một chữ cái viết thường
+    text = re.sub(r'([.!?]\s+)([a-z])', capitalize_sentence, text)
+    
+    return text
