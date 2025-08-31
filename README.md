@@ -19,10 +19,7 @@ An end-to-end project for abstractive text summarization of Vietnamese news arti
 
 ## 🌟 Demo
 
-The web interface allows users to input text and receive a summary.
-
-_(Note: The image link below should be replaced with a public URL, for example, by uploading the image to a GitHub issue as described previously.)_
-![Application Demo](checkpoints/Screenshot%202025-08-23%20221900.png)
+![Application Demo](https://github.com/HuyTQ-28/viet_summarizer/issues/1#issue-3370069958sxx)
 
 ## 🛠️ Technology Stack
 
@@ -30,7 +27,6 @@ _(Note: The image link below should be replaced with a public URL, for example, 
 - **Frontend:** HTML, CSS, JavaScript
 - **ML/DL:** PyTorch, SentencePiece
 - **Data Handling:** Pandas
-- **Containerization:** Docker
 
 ## 📂 Project Structure
 
@@ -77,7 +73,7 @@ Follow these instructions to set up and run the project locally.
 ### Prerequisites
 
 - Python 3.10 or higher
-- [Poetry](https://python-poetry.org/) (optional, for dependency management) or pip
+- The following libraries are required. You can install them using the requirements.txt file.
 
 ### Installation
 
