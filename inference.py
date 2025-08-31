@@ -1,5 +1,10 @@
 import torch
 import torch.nn.functional as F
+import argparse
+from pathlib import Path
+
+from utils.process_data import clean_text, post_process_summary
+from utils.model_loader import load_model_resources
 
 def _truncate_tokens(tokens, max_len: int, strategy: str):
     """
@@ -129,3 +134,37 @@ def beam_search_decode(model, source, source_mask, tokenizer, max_len, device, b
         return best_beam[0].squeeze(0)
     else:
         return beams[0][0].squeeze(0)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="=Tóm tắt văn bản tiếng Việt")
+    parser.add_argument("--text", type=str, required=True, help="Văn bản cần tóm tắt")
+    parser.add_argument("--beam_width", type=int, default=5, help="Số lượng beam cần duy trì")
+    parser.add_argument("--temperature", type=float, default=1.0, help="Temperature để làm 'mượt' phân phối xác suất")
+    args = parser.parse_args()
+
+    base_dir = str(Path(__file__).resolve().parent)
+    
+    print("--- Tải mô hình và tài nguyên... ---")
+    try:
+        model, tokenizer, config, device = load_model_resources(base_dir)
+        print("--- Tải tài nguyên thành công. ---")
+
+        print("\n--- Tóm tắt văn bản... ---")
+        cleaned_text = clean_text(args.text)
+        summary = summarize_with_beam_search(
+            text_to_summarize=cleaned_text,
+            model=model,
+            tokenizer=tokenizer,
+            config=config,
+            device=device,
+            beam_width=args.beam_width,
+            temperature=args.temperature,
+        )
+        final_summary = post_process_summary(summary)
+        
+        print("\n--- Kết quả tóm tắt ---")
+        print(final_summary)
+        print("---------------")
+
+    except Exception as e:
+        print(f"\n[Lỗi] Đã xảy ra lỗi: {e}")

@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Lấy các element từ DOM
   const form = document.getElementById("summarize-form");
   const inputText = document.getElementById("input-text");
   const submitBtn = document.getElementById("submit-btn");
@@ -14,7 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const summaryOutput = document.getElementById("summary-output");
   const errorMessage = document.getElementById("error-message");
 
-  // --- HÀM MỚI: Đồng bộ chiều cao của 2 ô văn bản ---
   const matchTextareaHeight = () => {
     // Đặt lại min-height để tính toán lại cho đúng khi resize
     summaryOutput.style.minHeight = "auto";
@@ -44,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Xử lý khi submit form
   form.addEventListener("submit", async (event) => {
-    event.preventDefault(); // Ngăn form gửi đi theo cách truyền thống
+    event.preventDefault();
 
     const text = inputText.value.trim();
     if (!text) {
@@ -52,10 +50,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Chuẩn bị cho việc gọi API
     setLoadingState(true);
     hideError();
-    // resultsContainer.classList.add("hidden"); // Dòng này không cần thiết nữa
 
     try {
       const response = await fetch("/summarize", {
@@ -97,8 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function displaySummary(summaryText) {
     summaryOutput.textContent = summaryText;
-    summaryOutput.classList.remove("placeholder"); // Xóa class placeholder khi có kết quả
-    // resultsContainer.classList.remove("hidden"); // Dòng này không cần thiết nữa
+    summaryOutput.classList.remove("placeholder");
   }
 
   function showError(message) {

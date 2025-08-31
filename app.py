@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 import sentencepiece as spm
 from pydantic import BaseModel
 
@@ -12,49 +13,12 @@ from utils.config import get_config
 from utils.process_data import clean_text, post_process_summary
 from model.transformer import build_transformer
 from inference import summarize_with_beam_search
+from utils.model_loader import load_model_resources
 
 class SummarizeRequest(BaseModel):
     text: str
     beam_width: int = 5
     temperature: float = 1.0
-
-def load_model_resources(base_dir: str):
-    """
-    Tải tokenizer và model
-    """
-    config = get_config(base_dir)
-    device = config['device']
-    
-    tokenizer = spm.SentencePieceProcessor()
-    tokenizer.load(config["tokenizer_file"])
-
-    model = build_transformer(
-        src_vocab_size=tokenizer.get_piece_size(),
-        tgt_vocab_size=tokenizer.get_piece_size(),
-        src_seq_len=config["max_len_text"],
-        tgt_seq_len=config["max_len_summary"],
-        d_model=config["d_model"],
-        N=config["num_layers"],
-        h=config["num_heads"],
-        d_ff=config["d_ff"],
-        dropout=config["dropout"],
-    ).to(device)
-    
-    model_path = Path(config["save_dir"]) / "transformer_summarizer_best.pt"
-    state = torch.load(model_path, map_location=device)
-    
-    state_dict = state['model_state_dict']
-    new_state_dict = {}
-    for k, v in state_dict.items():
-        if k.startswith('_orig_mod.'):
-            new_state_dict[k[len('_orig_mod.'):]] = v
-        else:
-            new_state_dict[k] = v
-    
-    model.load_state_dict(new_state_dict)
-
-    model.eval()
-    return model, tokenizer, config, device
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -94,7 +58,6 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 async def read_index(request: Request):
     """Hiển thị trang chủ"""
     return templates.TemplateResponse("index.html", {"request": request})
-
 
 @app.post("/summarize", response_class=JSONResponse)
 async def summarize_text(
